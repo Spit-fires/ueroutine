@@ -15,6 +15,7 @@ import type { Cell, ClassRow, Day, Entry, Workspace } from '#lib/model/types';
  *   "3:"            → subject 3 only
  *   "3:5|7:1"       → two entries (four quadrants: 3 | 7 over 5 | 1)
  *   "3:5*"          → blacked-out cell (the "inside code" mark)
+ *   "3:5+" / "3:5!" → yellow / red highlighted cell
  *
  * Indices are base 36. The JSON is deflated with `deflate-raw` when the
  * platform supports it, then base64url encoded. The finished string starts
@@ -70,7 +71,24 @@ const toIndex = (value: string, list: string[]): number => {
 	return found;
 };
 
-export function encodeCell(cell: Cell | undefined, subjects: string[], teachers: string[]): string | null {
+/** Marks travel as a trailing symbol; none of them occur in base-36 numbers. */
+const MARK_SUFFIX: Record<Cell['mark'], string> = {
+	none: '',
+	black: '*',
+	yellow: '+',
+	red: '!'
+};
+const SUFFIX_MARK: Record<string, Cell['mark']> = {
+	'*': 'black',
+	'+': 'yellow',
+	'!': 'red'
+};
+
+export function encodeCell(
+	cell: Cell | undefined,
+	subjects: string[],
+	teachers: string[]
+): string | null {
 	if (!cell) return null;
 	const parts: string[] = [];
 	for (const entry of cell.entries.slice(0, 2)) {
@@ -78,12 +96,11 @@ export function encodeCell(cell: Cell | undefined, subjects: string[], teachers:
 		const s = toIndex(entry.subject, subjects);
 		const t = toIndex(entry.teacher, teachers);
 		if (s < 0 && t < 0) continue;
-		parts.push(
-			`${s >= 0 ? s.toString(36) : ''}:${t >= 0 ? t.toString(36) : ''}`
-		);
+		parts.push(`${s >= 0 ? s.toString(36) : ''}:${t >= 0 ? t.toString(36) : ''}`);
 	}
-	if (!parts.length) return cell.black ? '*' : null;
-	return parts.join('|') + (cell.black ? '*' : '');
+	const suffix = MARK_SUFFIX[cell.mark] ?? '';
+	if (!parts.length) return suffix || null;
+	return parts.join('|') + suffix;
 }
 
 export function decodeCell(
@@ -91,19 +108,19 @@ export function decodeCell(
 	subjects: string[],
 	teachers: string[]
 ): Cell {
-	if (!code) return { entries: [], black: false };
-	const black = code.endsWith('*');
-	const body = black ? code.slice(0, -1) : code;
+	if (!code) return { entries: [], mark: 'none' };
+	const mark = SUFFIX_MARK[code.slice(-1)] ?? 'none';
+	const body = mark === 'none' ? code : code.slice(0, -1);
 	const entries: Entry[] = [];
 	for (const part of body.split('|')) {
 		if (!part) continue;
 		const [sIdx, tIdx] = part.split(':');
 		const subject = sIdx ? (subjects[parseInt(sIdx, 36)] ?? '') : '';
 		const teacher = tIdx ? (teachers[parseInt(tIdx, 36)] ?? '') : '';
-		if (!subject && !teacher && !black) continue;
+		if (!subject && !teacher && mark === 'none') continue;
 		entries.push({ subject, teacher });
 	}
-	return { entries, black };
+	return { entries, mark };
 }
 
 /** Collect the subject/teacher names this day actually uses, so the payload stays small. */
@@ -234,9 +251,7 @@ export async function decodePayload(payload: string): Promise<DecodeOutcome> {
 	if (wire.v !== PAYLOAD_VERSION) {
 		return { error: `Unsupported payload version ${wire.v}` };
 	}
-	const grid = wire.x.map((row) =>
-		row.map((code) => decodeCell(code, wire.t, wire.r))
-	);
+	const grid = wire.x.map((row) => row.map((code) => decodeCell(code, wire.t, wire.r)));
 	return {
 		routine: {
 			school: wire.n,

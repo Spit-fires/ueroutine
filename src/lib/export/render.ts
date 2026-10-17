@@ -41,8 +41,9 @@ const C = {
 	ink: '#1a1a1a',
 	teacher: '#454545',
 	dash: '#8a8a8a',
-	gridDash: '#bfbfbf',
 	black: '#000000',
+	markYellow: '#fce490',
+	markRed: '#f4a79e',
 	whiteInk: '#ffffff',
 	whiteSoft: 'rgba(255,255,255,0.78)'
 };
@@ -427,14 +428,24 @@ export function renderDay(
 		for (let period = 0; period < columns; period++) {
 			const cell: Cell | undefined = day.grid[row.id]?.[period];
 			const x = PAD + ROW_HEAD + period * PERIOD_W;
-			const black = Boolean(cell?.black);
+			const mark = cell?.mark ?? 'none';
+			const fill =
+				mark === 'black'
+					? C.black
+					: mark === 'yellow'
+						? C.markYellow
+						: mark === 'red'
+							? C.markRed
+							: period < split
+								? C.morning
+								: C.afternoon;
 
-			ctx.fillStyle = black ? C.black : period < split ? C.morning : C.afternoon;
+			ctx.fillStyle = fill;
 			ctx.fillRect(x, y, PERIOD_W, ROW_H);
 
 			const entries = (cell?.entries ?? []).filter((e) => e.subject || e.teacher);
-			const inkColor = black ? C.whiteInk : C.ink;
-			const subInk = black ? C.whiteSoft : C.teacher;
+			const inkColor = mark === 'black' ? C.whiteInk : C.ink;
+			const subInk = mark === 'black' ? C.whiteSoft : C.teacher;
 
 			if (entries.length >= 2) {
 				const half = PERIOD_W / 2;
@@ -448,7 +459,12 @@ export function renderDay(
 					subInk,
 					dense: true
 				});
-				ctx.strokeStyle = black ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.75)';
+				ctx.strokeStyle =
+					mark === 'black'
+						? 'rgba(255,255,255,0.35)'
+						: mark === 'none'
+							? 'rgba(255,255,255,0.75)'
+							: 'rgba(20,22,26,0.35)';
 				ctx.lineWidth = 1;
 				ctx.setLineDash([2, 3]);
 				ctx.beginPath();
@@ -460,7 +476,7 @@ export function renderDay(
 				drawEntry(ctx, entries[0], { x, y, w: PERIOD_W, h: ROW_H, ink: inkColor, subInk });
 			}
 
-			if (entries.length === 0 && !black) {
+			if (entries.length === 0 && mark === 'none') {
 				ctx.fillStyle = C.dash;
 				ctx.font = `700 13px ${F.sans}`;
 				ctx.textAlign = 'center';
@@ -472,19 +488,15 @@ export function renderDay(
 
 	/* --------------------------------------------------------------- rules -- */
 
-	// Dashed column separators inside the body.
-	ctx.strokeStyle = C.gridDash;
-	ctx.lineWidth = 1;
-	ctx.setLineDash([2, 3]);
-	for (let index = 0; index <= columns; index++) {
-		const x = Math.round(PAD + ROW_HEAD + index * PERIOD_W) + 0.5;
-		ctx.beginPath();
-		ctx.moveTo(x, gridTop);
-		ctx.lineTo(x, gridBottom);
-		ctx.stroke();
+	// Period column rules: solid black walls, same weight as the row rules.
+	ctx.fillStyle = C.black;
+	for (let index = 1; index < columns; index++) {
+		ctx.fillRect(PAD + ROW_HEAD + index * PERIOD_W - 1.5, gridTop, 3, gridBottom - gridTop);
 	}
 	// Light dashed divider between Class and SCL.
 	ctx.strokeStyle = '#cfcfcf';
+	ctx.lineWidth = 1;
+	ctx.setLineDash([2, 3]);
 	ctx.beginPath();
 	ctx.moveTo(Math.round(PAD + CLASS_W) + 0.5, gridTop);
 	ctx.lineTo(Math.round(PAD + CLASS_W) + 0.5, gridBottom);

@@ -53,6 +53,17 @@
 				bind:value={step}
 				aria-label="Minutes per period"
 			/>
+			<span class="label">shift</span>
+			<input
+				class="mini"
+				value={ws.shiftTime}
+				aria-label="Colour shift time"
+				title="The second period colour (afternoon) starts at this time"
+				onchange={(e) => {
+					desk.setShiftTime(e.currentTarget.value);
+					e.currentTarget.value = desk.workspace.shiftTime;
+				}}
+			/>
 			<button
 				class="act"
 				type="button"

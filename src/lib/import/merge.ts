@@ -1,11 +1,5 @@
 import type { DecodedRoutine } from '#lib/codec/payload';
-import {
-	emptyCell,
-	type Cell,
-	type ClassRow,
-	type Day,
-	type Workspace
-} from '#lib/model/types';
+import { emptyCell, type Cell, type ClassRow, type Day, type Workspace } from '#lib/model/types';
 
 export interface MergeOptions {
 	/** "new" creates (or fills) the day matching the payload date. */
@@ -68,7 +62,10 @@ export function mergeDecoded(
 		next.periods = [...decoded.periods];
 		next.groupSplit = Math.max(1, Math.min(decoded.groupSplit || 1, next.periods.length - 1 || 1));
 		if (decoded.groupNames[0] || decoded.groupNames[1]) {
-			next.groupNames = [decoded.groupNames[0] || next.groupNames[0], decoded.groupNames[1] || next.groupNames[1]];
+			next.groupNames = [
+				decoded.groupNames[0] || next.groupNames[0],
+				decoded.groupNames[1] || next.groupNames[1]
+			];
 		}
 		summary.periodsAdopted = true;
 		for (const day of next.days) {
@@ -125,15 +122,15 @@ export function mergeDecoded(
 		if (!classId) return;
 		row.forEach((cell, period) => {
 			if (period >= columns) {
-				if (cell.entries.length || cell.black) summary.cellsDropped++;
+				if (cell.entries.length || cell.mark !== 'none') summary.cellsDropped++;
 				return;
 			}
 			const entries = cell.entries.filter((entry) => entry.subject || entry.teacher);
-			const black = cell.black;
-			if (!entries.length && !black) return;
+			const mark = cell.mark;
+			if (!entries.length && mark === 'none') return;
 			grid[classId][period] = {
 				entries: entries.map((entry) => ({ subject: entry.subject, teacher: entry.teacher })),
-				black
+				mark
 			};
 			summary.cellsFilled++;
 		});

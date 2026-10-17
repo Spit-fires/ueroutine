@@ -71,6 +71,22 @@ export function buildPeriods(count: number, start = '9:00 AM', stepMinutes = 30)
 	return Array.from({ length: count }, (_, i) => minutesToTime(startMinutes + i * stepMinutes));
 }
 
+/**
+ * How many leading periods stay in the first colour group: every period whose
+ * label parses to a time before `shiftTime` (e.g. "12:00 PM"). Labels that do
+ * not parse (custom text) never trigger the shift.
+ */
+export function splitForTime(periods: string[], shiftTime: string): number {
+	const threshold = timeToMinutes(shiftTime);
+	if (threshold === null) return Math.max(1, Math.ceil(periods.length / 2));
+	const index = periods.findIndex((label) => {
+		const minutes = timeToMinutes(label);
+		return minutes !== null && minutes >= threshold;
+	});
+	const split = index === -1 ? periods.length : index;
+	return Math.max(1, Math.min(split, periods.length));
+}
+
 /* ------------------------------------------------------------------ seed -- */
 
 /**
@@ -99,11 +115,14 @@ export function emptyGrid(classes: ClassRow[], periods = 14): Record<string, Cel
 }
 
 export function createInitialWorkspace(today = toISODate(new Date())): Workspace {
+	const periods = buildPeriods(14, '9:00 AM', 30);
+	const shiftTime = '12:00 PM';
 	return {
 		version: WORKSPACE_VERSION,
 		school: 'Utsaho Educare',
-		periods: buildPeriods(14, '9:00 AM', 30),
-		groupSplit: 7,
+		periods,
+		groupSplit: splitForTime(periods, shiftTime),
+		shiftTime,
 		groupNames: ['Morning', 'Afternoon'],
 		classes: DEFAULT_CLASSES,
 		days: defaultDays(today),
@@ -143,7 +162,7 @@ export function workbookDayToDay(
 			if (!cells[p]) cells[p] = emptyCell();
 			const entries: Entry[] = [];
 			if (source.s || source.t) entries.push({ subject: source.s, teacher: source.t });
-			cells[p] = { entries, black: source.black };
+			cells[p] = { entries, mark: source.black ? 'black' : 'none' };
 			placed++;
 		}
 		grid[target.id] = cells;

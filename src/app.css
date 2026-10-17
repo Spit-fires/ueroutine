@@ -45,6 +45,8 @@
 	/* Cell states */
 	--code: #000000;
 	--code-ink: #ffffff;
+	--mark-yellow: #fce490;
+	--mark-red: #f4a79e;
 
 	/* Type */
 	--font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', serif;

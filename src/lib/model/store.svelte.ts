@@ -3,13 +3,21 @@ import {
 	sortRoster,
 	toISODate,
 	type Cell,
+	type CellMark,
 	type ClassRow,
 	type Day,
 	type Entry,
 	type Selection,
 	type Workspace
 } from './types';
-import { buildPeriods, createInitialWorkspace, workbookDayToDay, type WorkbookDay } from './seed';
+import {
+	buildPeriods,
+	createInitialWorkspace,
+	splitForTime,
+	timeToMinutes,
+	workbookDayToDay,
+	type WorkbookDay
+} from './seed';
 
 const STORAGE_KEY = 'utsaho.routine-desk.v1';
 const HISTORY_LIMIT = 80;
@@ -24,7 +32,7 @@ export interface DeskStats {
 	cells: number;
 	filled: number;
 	dual: number;
-	black: number;
+	marked: number;
 }
 
 /** Teacher shorthand such as "SIT/YA" means two teachers sharing the slot. */
@@ -37,6 +45,13 @@ export function splitTeachers(teacher: string): string[] {
 
 function deepClone<T>(source: T): T {
 	return JSON.parse(JSON.stringify(source)) as T;
+}
+
+/** Old stored cells carried `black: boolean`; both shapes fold into `mark`. */
+function normaliseCell(raw: (Cell & { black?: boolean }) | undefined): Cell {
+	if (!raw) return emptyCell();
+	const mark: CellMark = raw.mark ?? (raw.black ? 'black' : 'none');
+	return { entries: raw.entries ?? [], mark };
 }
 
 class RoutineDesk {
@@ -86,6 +101,7 @@ class RoutineDesk {
 			...input,
 			periods: input.periods?.length ? input.periods : base.periods,
 			groupNames: input.groupNames ?? base.groupNames,
+			shiftTime: input.shiftTime || base.shiftTime,
 			band: { ...base.band, ...(input.band ?? {}) },
 			subjects: sortRoster(noSlash(input.subjects?.length ? input.subjects : base.subjects)),
 			teachers: sortRoster(noSlash(input.teachers?.length ? input.teachers : base.teachers)),
@@ -97,12 +113,14 @@ class RoutineDesk {
 				school: c.school || 'All'
 			}))
 		};
+		// The colour shift follows the clock, not a stale period count.
+		ws.groupSplit = splitForTime(ws.periods, ws.shiftTime);
 		const columns = ws.periods.length;
 		ws.days = (input.days ?? []).map((day, index) => {
 			const grid: Record<string, Cell[]> = {};
 			for (const row of ws.classes) {
 				const existing = day.grid?.[row.id] ?? [];
-				grid[row.id] = Array.from({ length: columns }, (_, p) => existing[p] ?? emptyCell());
+				grid[row.id] = Array.from({ length: columns }, (_, p) => normaliseCell(existing[p]));
 			}
 			return { id: day.id || `d${index + 1}`, date: day.date || toISODate(new Date()), grid };
 		});
@@ -319,24 +337,24 @@ class RoutineDesk {
 			const cell = ws.days.find((d) => d.id === sel.dayId)?.grid[sel.classId]?.[sel.period];
 			if (!cell) return;
 			cell.entries.splice(index, 1);
-			if (!cell.entries.length) cell.black = false;
+			if (!cell.entries.length) cell.mark = 'none';
 		});
 	}
 
-	setBlack(black: boolean) {
+	setMark(mark: CellMark) {
 		const sel = this.selection;
 		if (!sel) return;
 		this.mutate((ws) => {
 			const cell = ws.days.find((d) => d.id === sel.dayId)?.grid[sel.classId]?.[sel.period];
 			if (!cell) return;
-			cell.black = black;
+			cell.mark = mark;
 		});
 	}
 
-	toggleBlack() {
+	toggleMark(mark: Exclude<CellMark, 'none'>) {
 		const cell = this.selectedCell;
 		if (!cell) return;
-		this.setBlack(!cell.black);
+		this.setMark(cell.mark === mark ? 'none' : mark);
 	}
 
 	clearCell(
@@ -480,7 +498,7 @@ class RoutineDesk {
 			} else {
 				ws.periods = current.slice(0, next);
 			}
-			ws.groupSplit = Math.max(1, Math.min(ws.groupSplit, ws.periods.length - 1 || 1));
+			ws.groupSplit = splitForTime(ws.periods, ws.shiftTime);
 			for (const day of ws.days) {
 				for (const row of ws.classes) {
 					const cells = day.grid[row.id] ?? [];
@@ -500,6 +518,20 @@ class RoutineDesk {
 	regeneratePeriods(start: string, stepMinutes: number) {
 		this.mutate((ws) => {
 			ws.periods = buildPeriods(ws.periods.length, start, stepMinutes);
+			ws.groupSplit = splitForTime(ws.periods, ws.shiftTime);
+		});
+	}
+
+	/** Move the colour shift; invalid times are ignored. */
+	setShiftTime(time: string) {
+		const value = time.trim();
+		if (timeToMinutes(value) === null) {
+			this.flash('Colour shift needs a time like 12:00 PM', 'warn');
+			return;
+		}
+		this.mutate((ws) => {
+			ws.shiftTime = value;
+			ws.groupSplit = splitForTime(ws.periods, value);
 		});
 	}
 
@@ -678,15 +710,15 @@ class RoutineDesk {
 
 	stats(dayId?: string): DeskStats {
 		const day = dayId ? this.dayById(dayId) : (this.selectedDay ?? this.workspace.days[0]);
-		const stats: DeskStats = { cells: 0, filled: 0, dual: 0, black: 0 };
+		const stats: DeskStats = { cells: 0, filled: 0, dual: 0, marked: 0 };
 		if (!day) return stats;
 		for (const row of this.workspace.classes) {
 			for (const cell of day.grid[row.id] ?? []) {
 				stats.cells++;
 				const hasText = cell.entries.some((e) => e.subject || e.teacher);
-				if (hasText || cell.black) stats.filled++;
+				if (hasText || cell.mark !== 'none') stats.filled++;
 				if (cell.entries.length > 1) stats.dual++;
-				if (cell.black) stats.black++;
+				if (cell.mark !== 'none') stats.marked++;
 			}
 		}
 		return stats;

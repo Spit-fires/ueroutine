@@ -55,7 +55,13 @@ describe('cell codes', () => {
 	const teachers = ['SIH', 'JAZ'];
 
 	it('encodes a subject/teacher pair', () => {
-		expect(encodeCell({ entries: [{ subject: 'Math', teacher: 'JAZ' }], black: false }, subjects, teachers)).toBe('0:1');
+		expect(
+			encodeCell(
+				{ entries: [{ subject: 'Math', teacher: 'JAZ' }], mark: 'none' },
+				subjects,
+				teachers
+			)
+		).toBe('0:1');
 	});
 
 	it('encodes two entries as a quadrant cell', () => {
@@ -64,26 +70,37 @@ describe('cell codes', () => {
 				{ subject: 'Math', teacher: 'SIH' },
 				{ subject: 'BGS', teacher: 'JAZ' }
 			],
-			black: false
+			mark: 'none'
 		};
 		expect(encodeCell(cell, subjects, teachers)).toBe('0:0|1:1');
 		expect(decodeCell('0:0|1:1', subjects, teachers)).toEqual(cell);
 	});
 
 	it('carries the black marker through a round trip', () => {
-		const cell: Cell = { entries: [{ subject: 'Math', teacher: 'JAZ' }], black: true };
+		const cell: Cell = { entries: [{ subject: 'Math', teacher: 'JAZ' }], mark: 'black' };
 		const code = encodeCell(cell, subjects, teachers);
 		expect(code).toBe('0:1*');
 		expect(decodeCell(code, subjects, teachers)).toEqual(cell);
 	});
 
+	it('carries yellow and red marks through a round trip', () => {
+		const yellow: Cell = { entries: [{ subject: 'Math', teacher: '' }], mark: 'yellow' };
+		const red: Cell = { entries: [], mark: 'red' };
+		expect(encodeCell(yellow, subjects, teachers)).toBe('0:+');
+		expect(decodeCell('0:+', subjects, teachers)).toEqual(yellow);
+		expect(encodeCell(red, subjects, teachers)).toBe('!');
+		expect(decodeCell('!', subjects, teachers)).toEqual(red);
+	});
+
 	it('keeps a blacked-out empty cell', () => {
-		expect(encodeCell({ entries: [], black: true }, subjects, teachers)).toBe('*');
-		expect(decodeCell('*', subjects, teachers)).toEqual({ entries: [], black: true });
+		expect(encodeCell({ entries: [], mark: 'black' }, subjects, teachers)).toBe('*');
+		expect(decodeCell('*', subjects, teachers)).toEqual({ entries: [], mark: 'black' });
 	});
 
 	it('drops entries whose names are unknown', () => {
-		expect(encodeCell({ entries: [{ subject: 'Ghost', teacher: '' }], black: false }, subjects, teachers)).toBeNull();
+		expect(
+			encodeCell({ entries: [{ subject: 'Ghost', teacher: '' }], mark: 'none' }, subjects, teachers)
+		).toBeNull();
 	});
 
 	it('treats an empty cell as null', () => {
@@ -98,15 +115,15 @@ function sampleWorkspace(): { ws: Workspace; day: Day } {
 	ws.groupSplit = 2;
 	const day = ws.days[0];
 	const row = ws.classes[0].id;
-	day.grid[row][0] = { entries: [{ subject: 'Math', teacher: 'SIH' }], black: false };
+	day.grid[row][0] = { entries: [{ subject: 'Math', teacher: 'SIH' }], mark: 'none' };
 	day.grid[row][1] = {
 		entries: [
 			{ subject: 'BGS', teacher: 'JAZ' },
 			{ subject: 'ICT', teacher: 'MAM' }
 		],
-		black: false
+		mark: 'none'
 	};
-	day.grid[row][2] = { entries: [{ subject: 'Sci Exam', teacher: 'JAZ' }], black: true };
+	day.grid[row][2] = { entries: [{ subject: 'Sci Exam', teacher: 'JAZ' }], mark: 'black' };
 	return { ws, day };
 }
 
@@ -124,10 +141,18 @@ describe('payload', () => {
 		expect(routine.date).toBe('2026-09-07');
 		expect(routine.periods).toEqual(ws.periods);
 		expect(routine.groupSplit).toBe(2);
-		expect(routine.classes).toEqual(ws.classes.map((c) => ({ grade: c.grade, section: c.section })));
-		expect(routine.grid[0][0]).toEqual({ entries: [{ subject: 'Math', teacher: 'SIH' }], black: false });
+		expect(routine.classes).toEqual(
+			ws.classes.map((c) => ({ grade: c.grade, section: c.section }))
+		);
+		expect(routine.grid[0][0]).toEqual({
+			entries: [{ subject: 'Math', teacher: 'SIH' }],
+			mark: 'none'
+		});
 		expect(routine.grid[0][1].entries).toHaveLength(2);
-		expect(routine.grid[0][2]).toEqual({ entries: [{ subject: 'Sci Exam', teacher: 'JAZ' }], black: true });
+		expect(routine.grid[0][2]).toEqual({
+			entries: [{ subject: 'Sci Exam', teacher: 'JAZ' }],
+			mark: 'black'
+		});
 		expect(routine.grid[0][3]).toEqual(emptyCell());
 	});
 
@@ -173,7 +198,8 @@ describe('band framing', () => {
 			((frame[frame.length - 4] << 24) |
 				(frame[frame.length - 3] << 16) |
 				(frame[frame.length - 2] << 8) |
-				frame[frame.length - 1]) >>> 0;
+				frame[frame.length - 1]) >>>
+			0;
 		expect(crc32(frame.subarray(6, frame.length - 4))).toBe(stored);
 	});
 
@@ -182,7 +208,9 @@ describe('band framing', () => {
 		const stream = interleaveCopies(frame);
 		expect(stream.length).toBe(frame.length * BAND_COPIES);
 		for (let copy = 0; copy < BAND_COPIES; copy++) {
-			expect([...stream.subarray(copy * frame.length, (copy + 1) * frame.length)]).toEqual([...frame]);
+			expect([...stream.subarray(copy * frame.length, (copy + 1) * frame.length)]).toEqual([
+				...frame
+			]);
 		}
 	});
 

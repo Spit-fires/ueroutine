@@ -72,7 +72,13 @@
 				desk.select(null);
 			} else if (event.key.toLowerCase() === 'b') {
 				event.preventDefault();
-				desk.toggleBlack();
+				desk.toggleMark('black');
+			} else if (event.key.toLowerCase() === 'y') {
+				event.preventDefault();
+				desk.toggleMark('yellow');
+			} else if (event.key.toLowerCase() === 'r') {
+				event.preventDefault();
+				desk.toggleMark('red');
 			} else if (event.key === 'Backspace' || event.key === 'Delete') {
 				event.preventDefault();
 				desk.clearCell();
@@ -118,7 +124,7 @@
 				<span class="status-sep">·</span>
 				<span class="status-item">{stats.filled} filled</span>
 				<span class="status-item">{stats.dual} split into two</span>
-			<span class="status-item">{stats.black} blacked out</span>
+				<span class="status-item">{stats.marked} marked</span>
 			</div>
 			<div class="status-right">
 				<a href="/diagnostics">round-trip check</a>
@@ -226,20 +232,19 @@
 			grid-template-columns: minmax(0, 1fr);
 		}
 
-	.rail {
-		min-height: 420px;
-	}
-}
-
-@media (max-width: 760px) {
-	.page {
-		padding: 10px;
-		gap: 8px;
+		.rail {
+			min-height: 420px;
+		}
 	}
 
-	.work {
-		gap: 8px;
-	}
-}
+	@media (max-width: 760px) {
+		.page {
+			padding: 10px;
+			gap: 8px;
+		}
 
+		.work {
+			gap: 8px;
+		}
+	}
 </style>

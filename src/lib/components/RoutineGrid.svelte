@@ -62,7 +62,9 @@
 					class="cell"
 					class:group-a={index < split}
 					class:group-b={index >= split}
-					class:black={cell?.black}
+					class:black={cell?.mark === 'black'}
+					class:yellow={cell?.mark === 'yellow'}
+					class:red={cell?.mark === 'red'}
 					class:dual={list.length > 1}
 					class:selected={isSelected(row.id, index)}
 					class:is-break={list.some((entry) => entry.subject.trim().toUpperCase() === 'BREAK')}
@@ -83,8 +85,10 @@
 					{:else if list.length === 1}
 						<span class="subject">{list[0].subject}</span>
 						<span class="teacher">{list[0].teacher}</span>
-					{:else if cell?.black}
+					{:else if cell?.mark === 'black'}
 						<span class="code-mark">code</span>
+					{:else if cell && cell.mark !== 'none'}
+						<span aria-hidden="true"></span>
 					{:else}
 						<span class="vacant" aria-hidden="true"></span>
 					{/if}
@@ -143,7 +147,7 @@
 		gap: 1px;
 		height: 56px;
 		background: var(--navy);
-		border-right: 1px solid rgba(255, 255, 255, 0.22);
+		border-right: 1.5px solid rgba(255, 255, 255, 0.38);
 		border-bottom: 2px solid var(--rule);
 	}
 
@@ -179,8 +183,8 @@
 		height: 78px;
 		padding: 0 14px;
 		background: var(--surface);
-		border-right: 1px solid var(--hairline);
-		border-bottom: 1px solid var(--hairline);
+		border-right: 1.5px solid rgba(20, 22, 26, 0.45);
+		border-bottom: 1.5px solid rgba(20, 22, 26, 0.45);
 	}
 
 	.rowhead-line {
@@ -215,8 +219,11 @@
 		padding: 6px 8px;
 		overflow: hidden;
 		text-align: center;
-		border-right: 1px solid rgba(20, 22, 26, 0.07);
-		border-bottom: 1px solid #d9d9d9;
+		/* Bold period borders — only the two sharing seams, so every line
+		   stays one width. The in-cell divider between split entries keeps
+		   its own thin rule. */
+		border-right: 1.5px solid rgba(20, 22, 26, 0.45);
+		border-bottom: 1.5px solid rgba(20, 22, 26, 0.45);
 		transition:
 			background 200ms var(--ease-out-quint),
 			box-shadow 200ms var(--ease-out-quint);
@@ -295,7 +302,15 @@
 
 	.cell.black {
 		background: var(--code);
-		border-color: rgba(255, 255, 255, 0.08);
+		border-color: rgba(255, 255, 255, 0.22);
+	}
+
+	.cell.yellow {
+		background: var(--mark-yellow);
+	}
+
+	.cell.red {
+		background: var(--mark-red);
 	}
 
 	.cell.black .subject {

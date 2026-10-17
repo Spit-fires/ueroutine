@@ -80,7 +80,9 @@
 				<li><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move</li>
 				<li><kbd>Enter</kbd> focus the fields</li>
 				<li><kbd>Tab</kbd> jump to the next period</li>
-				<li><kbd>B</kbd> blacken · <kbd>Del</kbd> clear</li>
+				<li>
+					<kbd>B</kbd> blacken · <kbd>Y</kbd> yellow · <kbd>R</kbd> red · <kbd>Del</kbd> clear
+				</li>
 			</ul>
 		</div>
 	{:else}
@@ -97,7 +99,9 @@
 			</div>
 			<h2 class="display title">{className(row)}</h2>
 			<div class="head-chips">
-				{#if cell?.black}<span class="chip chip-navy">black cell</span>{/if}
+				{#if cell?.mark === 'black'}<span class="chip chip-navy">black cell</span>{/if}
+				{#if cell?.mark === 'yellow'}<span class="chip chip-amber">yellow cell</span>{/if}
+				{#if cell?.mark === 'red'}<span class="chip chip-danger">red cell</span>{/if}
 				{#if dual}<span class="chip chip-sage">two entries</span>{/if}
 				{#if cell && splitTeachers(entryA?.teacher ?? '').length > 1}
 					<span class="chip chip-amber">co-taught</span>
@@ -154,17 +158,17 @@
 					oncreate={createSubject}
 					oncommit={() => teacherBToken++}
 				/>
-			<label class="label" for="teacher-b">Teacher</label>
-			<Combobox
-				value={entryB?.teacher ?? ''}
-				options={desk.workspace.teachers}
-				placeholder="Second teacher"
-				ariaLabel="Second teacher"
-				mono
-				onchange={(value) => setField(1, 'teacher', value)}
-				oncreate={createTeacher}
-				oncommit={nextPeriod}
-			/>
+				<label class="label" for="teacher-b">Teacher</label>
+				<Combobox
+					value={entryB?.teacher ?? ''}
+					options={desk.workspace.teachers}
+					placeholder="Second teacher"
+					ariaLabel="Second teacher"
+					mono
+					onchange={(value) => setField(1, 'teacher', value)}
+					oncreate={createTeacher}
+					oncommit={nextPeriod}
+				/>
 			</section>
 		{:else}
 			<section class="entry ghost">
@@ -172,25 +176,50 @@
 					<span class="eyebrow">entry two</span>
 				</div>
 				<p class="ghost-note">
-					Slots two subjects share this period? Split the cell into four quadrants — subjects on top,
-					teachers underneath.
+					Slots two subjects share this period? Split the cell into four quadrants — subjects on
+					top, teachers underneath.
 				</p>
-				<button class="btn btn-sm" type="button" onclick={() => desk.addEntry()}>Split into two</button>
+				<button class="btn btn-sm" type="button" onclick={() => desk.addEntry()}
+					>Split into two</button
+				>
 			</section>
 		{/if}
 
 		<section class="actions">
 			<button
 				class="btn btn-sm"
-				class:btn-primary={cell?.black}
+				class:btn-primary={cell?.mark === 'black'}
 				type="button"
-				onclick={() => desk.toggleBlack()}
-				title="Black cells mark a slot that lives inside a code"
+				onclick={() => desk.toggleMark('black')}
+				title="Black marks a slot that lives inside a code"
 			>
-				{cell?.black ? 'Unblacken' : 'Blacken cell'}
+				Blacken
+			</button>
+			<button
+				class="btn btn-sm"
+				class:btn-primary={cell?.mark === 'yellow'}
+				type="button"
+				onclick={() => desk.toggleMark('yellow')}
+				title="Highlight the cell yellow — press again to clear the mark"
+			>
+				Yellow
+			</button>
+			<button
+				class="btn btn-sm"
+				class:btn-primary={cell?.mark === 'red'}
+				type="button"
+				onclick={() => desk.toggleMark('red')}
+				title="Highlight the cell red — press again to clear the mark"
+			>
+				Red
 			</button>
 			<button class="btn btn-sm" type="button" onclick={() => desk.copyCell()}>Copy</button>
-			<button class="btn btn-sm" type="button" disabled={!desk.clipboard} onclick={() => desk.pasteCell()}>
+			<button
+				class="btn btn-sm"
+				type="button"
+				disabled={!desk.clipboard}
+				onclick={() => desk.pasteCell()}
+			>
 				Paste
 			</button>
 			<button class="btn btn-sm btn-danger" type="button" onclick={() => desk.clearCell()}>
@@ -218,7 +247,7 @@
 		<footer class="foot">
 			<p>
 				<kbd>Tab</kbd> next period · <kbd>Shift</kbd>+<kbd>Tab</kbd> previous ·
-				<kbd>B</kbd> blacken
+				<kbd>B</kbd> black · <kbd>Y</kbd> yellow · <kbd>R</kbd> red
 			</p>
 		</footer>
 	{/if}

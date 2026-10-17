@@ -5,9 +5,9 @@
  * Every intersection is a `Cell` holding up to two entries. One entry renders
  * as the classic "subject over teacher" stack; two entries split the cell into
  * four quadrants (subject | subject on top, teacher | teacher underneath).
- * A cell can also be blacked out — the school's mark for a slot that lives
- * inside a code. The workbook paints those cells black with white text, and
- * the app reproduces exactly that.
+ * A cell can also be marked — blacked out (the school's mark for a slot that
+ * lives inside a code, painted black with white text) or highlighted yellow or
+ * red. The workbook paints those fills and the app reproduces exactly that.
  */
 
 export const WORKSPACE_VERSION = 1;
@@ -18,10 +18,13 @@ export interface Entry {
 	teacher: string;
 }
 
-/** A grid intersection: how many entries, and whether it is blacked out. */
+/** How a cell is painted: plain, blacked out, yellow or red highlighted. */
+export type CellMark = 'none' | 'black' | 'yellow' | 'red';
+
+/** A grid intersection: how many entries, and how the cell is marked. */
 export interface Cell {
 	entries: Entry[];
-	black: boolean;
+	mark: CellMark;
 }
 
 /**
@@ -59,6 +62,8 @@ export interface Workspace {
 	periods: string[];
 	/** How many leading periods belong to the first colour group. */
 	groupSplit: number;
+	/** Period time where the second colour group starts, e.g. "12:00 PM". */
+	shiftTime: string;
 	/** Optional names for the two colour groups. */
 	groupNames: [string, string];
 	classes: ClassRow[];
@@ -75,7 +80,7 @@ export interface Selection {
 }
 
 export function emptyCell(): Cell {
-	return { entries: [], black: false };
+	return { entries: [], mark: 'none' };
 }
 
 export function entryOf(subject = '', teacher = ''): Entry {
@@ -84,7 +89,7 @@ export function entryOf(subject = '', teacher = ''): Entry {
 
 export function cellIsEmpty(cell: Cell | undefined): boolean {
 	if (!cell) return true;
-	if (cell.black) return false;
+	if (cell.mark !== 'none') return false;
 	return cell.entries.every((e) => !e.subject.trim() && !e.teacher.trim());
 }
 

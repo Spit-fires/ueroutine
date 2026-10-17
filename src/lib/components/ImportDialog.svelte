@@ -24,7 +24,7 @@
 	const routine = $derived(result?.routine);
 	const filledCells = $derived(
 		routine?.grid.reduce(
-			(sum, row) => sum + row.filter((cell) => cell.entries.length || cell.black).length,
+			(sum, row) => sum + row.filter((cell) => cell.entries.length || cell.mark !== 'none').length,
 			0
 		) ?? 0
 	);
@@ -161,9 +161,11 @@
 					<div>
 						<span class="eyebrow">
 							{result.source === 'png-text' ? 'png metadata · lossless' : 'data band · scanned'}
-						</span><h3 class="display">{longDate(routine.date)}</h3>
+						</span>
+						<h3 class="display">{longDate(routine.date)}</h3>
 						<p class="lede">
-							{routine.school} · {routine.classes.length} class row(s) · {routine.periods.length} period(s) ·
+							{routine.school} · {routine.classes.length} class row(s) · {routine.periods.length} period(s)
+							·
 							{filledCells} filled cell(s)
 						</p>
 					</div>
@@ -175,28 +177,51 @@
 				</div>
 
 				<dl class="facts">
-					<div><dt>decoder</dt><dd>{result.stats.decoder}</dd></div>
-					<div><dt>band</dt><dd>{result.stats.modulePixels ? `${result.stats.modulePixels.toFixed(1)}px modules` : '—'}</dd></div>
-					<div><dt>took</dt><dd>{result.stats.durationMs} ms</dd></div>
+					<div>
+						<dt>decoder</dt>
+						<dd>{result.stats.decoder}</dd>
+					</div>
+					<div>
+						<dt>band</dt>
+						<dd>
+							{result.stats.modulePixels
+								? `${result.stats.modulePixels.toFixed(1)}px modules`
+								: '—'}
+						</dd>
+					</div>
+					<div>
+						<dt>took</dt>
+						<dd>{result.stats.durationMs} ms</dd>
+					</div>
 				</dl>
 
 				<div class="classes">
 					{#each routine.classes as row, index (index)}
-						<span class="chip">{className({ id: 'x', grade: row.grade, section: row.section, school: '' })}</span>
+						<span class="chip"
+							>{className({ id: 'x', grade: row.grade, section: row.section, school: '' })}</span
+						>
 					{/each}
 				</div>
 
 				<div class="choices">
 					<fieldset>
 						<legend class="eyebrow">where</legend>
-						<label><input type="radio" bind:group={target} value="new" /> Add as its own day ({routine.date})</label>
-						<label><input type="radio" bind:group={target} value="replace" /> Replace the day on screen</label>
+						<label
+							><input type="radio" bind:group={target} value="new" /> Add as its own day ({routine.date})</label
+						>
+						<label
+							><input type="radio" bind:group={target} value="replace" /> Replace the day on screen</label
+						>
 					</fieldset>
 					<fieldset>
 						<legend class="eyebrow">columns</legend>
-						<label><input type="radio" bind:group={layout} value="keep" /> Keep our {desk.periods.length} periods</label>
+						<label
+							><input type="radio" bind:group={layout} value="keep" /> Keep our {desk.periods
+								.length} periods</label
+						>
 						<label>
-							<input type="radio" bind:group={layout} value="adopt" /> Adopt the imported {routine.periods.length}
+							<input type="radio" bind:group={layout} value="adopt" /> Adopt the imported {routine
+								.periods.length}
 						</label>
 					</fieldset>
 				</div>
