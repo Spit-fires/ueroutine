@@ -5,8 +5,6 @@
 
 	let subjectToken = $state(0);
 	let teacherToken = $state(0);
-	let subjectBToken = $state(0);
-	let teacherBToken = $state(0);
 	let lastFocus = 0;
 
 	const selection = $derived(desk.selection);
@@ -46,25 +44,6 @@
 	function setField(index: number, field: keyof Entry, value: string) {
 		desk.setEntry(index, field, value);
 	}
-
-	function step(delta: 1 | -1) {
-		desk.moveSelection(delta, 0);
-		desk.focusInspector++;
-	}
-
-	/** Enter walks down the cell: subject → teacher → next period. */
-	function nextPeriod() {
-		desk.moveSelection(1, 0);
-		desk.focusInspector++;
-	}
-
-	function createSubject(name: string) {
-		desk.addSubject(name);
-	}
-
-	function createTeacher(name: string) {
-		desk.addTeacher(name);
-	}
 </script>
 
 <aside class="inspector">
@@ -76,14 +55,6 @@
 				Every cell holds a subject on top and a teacher underneath — or two entries, which splits it
 				into four quadrants.
 			</p>
-			<ul class="keys">
-				<li><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move</li>
-				<li><kbd>Enter</kbd> focus the fields</li>
-				<li><kbd>Tab</kbd> jump to the next period</li>
-				<li>
-					<kbd>B</kbd> blacken · <kbd>Y</kbd> yellow · <kbd>R</kbd> red · <kbd>Del</kbd> clear
-				</li>
-			</ul>
 		</div>
 	{:else}
 		<header class="head reveal">
@@ -119,26 +90,20 @@
 			<Combobox
 				value={entryA?.subject ?? ''}
 				options={desk.workspace.subjects}
-				placeholder="e.g. Math, E2 Exam, BGS"
+				placeholder="Select subject"
 				ariaLabel="Subject"
 				focusToken={subjectToken}
 				onchange={(value) => setField(0, 'subject', value)}
-				oncreate={createSubject}
-				onstep={step}
-				oncommit={() => teacherToken++}
 			/>
 			<label class="label" for="teacher-a">Teacher</label>
 			<Combobox
 				value={entryA?.teacher ?? ''}
 				options={desk.workspace.teachers}
-				placeholder="e.g. SIH, OFF"
+				placeholder="Select teacher"
 				ariaLabel="Teacher"
 				mono
 				focusToken={teacherToken}
 				onchange={(value) => setField(0, 'teacher', value)}
-				oncreate={createTeacher}
-				onstep={step}
-				oncommit={nextPeriod}
 			/>
 		</section>
 
@@ -155,8 +120,6 @@
 					placeholder="Second subject"
 					ariaLabel="Second subject"
 					onchange={(value) => setField(1, 'subject', value)}
-					oncreate={createSubject}
-					oncommit={() => teacherBToken++}
 				/>
 				<label class="label" for="teacher-b">Teacher</label>
 				<Combobox
@@ -166,8 +129,6 @@
 					ariaLabel="Second teacher"
 					mono
 					onchange={(value) => setField(1, 'teacher', value)}
-					oncreate={createTeacher}
-					oncommit={nextPeriod}
 				/>
 			</section>
 		{:else}
@@ -243,13 +204,6 @@
 				</div>
 			</section>
 		{/if}
-
-		<footer class="foot">
-			<p>
-				<kbd>Tab</kbd> next period · <kbd>Shift</kbd>+<kbd>Tab</kbd> previous ·
-				<kbd>B</kbd> black · <kbd>Y</kbd> yellow · <kbd>R</kbd> red
-			</p>
-		</footer>
 	{/if}
 </aside>
 
@@ -283,17 +237,6 @@
 		font-size: 13px;
 		color: var(--ink-2);
 		line-height: 1.55;
-	}
-
-	.keys {
-		margin: 4px 0 0;
-		padding: 0;
-		list-style: none;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		font-size: 12px;
-		color: var(--ink-3);
 	}
 
 	.head {
@@ -392,13 +335,5 @@
 
 	.quick-chip:hover {
 		transform: translateY(-1px);
-	}
-
-	.foot {
-		margin-top: auto;
-		padding-top: 12px;
-		border-top: 1px solid var(--hairline);
-		font-size: 11.5px;
-		color: var(--muted);
 	}
 </style>

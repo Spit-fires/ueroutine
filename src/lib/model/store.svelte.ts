@@ -374,7 +374,7 @@ class RoutineDesk {
 		const cell = this.selectedCell;
 		if (!cell) return;
 		this.clipboard = deepClone($state.snapshot(cell));
-		this.flash('Cell copied — paste with Ctrl V', 'info');
+		this.flash('Cell copied — use Paste to drop it', 'info');
 	}
 
 	pasteCell() {

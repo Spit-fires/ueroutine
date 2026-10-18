@@ -77,7 +77,7 @@
 				type="button"
 				onclick={() => {
 					desk.clearDay(day.id);
-					desk.flash('Day cleared — Ctrl Z to undo', 'info');
+					desk.flash('Day cleared', 'info');
 				}}>Clear day</button
 			>
 		</div>

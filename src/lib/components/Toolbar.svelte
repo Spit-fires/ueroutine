@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { desk } from '#lib/model/store.svelte';
-	import { weekdayName, type Day } from '#lib/model/types';
+	import { fullDate, weekdayName, type Day } from '#lib/model/types';
 
 	interface Props {
 		onexport: () => void;
@@ -11,12 +11,21 @@
 	let { onexport, onimport, onsetup }: Props = $props();
 
 	const day = $derived<Day>(desk.currentDay);
+	let dateInput = $state<HTMLInputElement | null>(null);
 
 	function pickDate(event: Event) {
 		const value = (event.currentTarget as HTMLInputElement).value;
 		if (value && value !== day.date) {
 			desk.goToDate(value);
-			desk.flash(`Jumped to ${weekdayName(value)} ${value}`, 'good');
+			desk.flash(`Jumped to ${weekdayName(value)}, ${fullDate(value)}`, 'good');
+		}
+	}
+
+	function openPicker() {
+		try {
+			dateInput?.showPicker();
+		} catch {
+			dateInput?.click();
 		}
 	}
 </script>
@@ -27,13 +36,51 @@
 	</div>
 
 	<div class="nav">
-		<input class="day-input" type="date" value={day.date} onchange={pickDate} aria-label="Pick day" />
+		<span class="weekday">{weekdayName(day.date)}</span>
+		<button class="day-btn" type="button" onclick={openPicker} aria-label="Pick day">
+			<span class="day-text">{fullDate(day.date)}</span>
+			<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+				<rect
+					x="1.5"
+					y="2.5"
+					width="13"
+					height="12"
+					rx="2"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.2"
+				/>
+				<path
+					d="M1.5 6h13M5 1v3M11 1v3"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.2"
+					stroke-linecap="round"
+				/>
+			</svg>
+		</button>
+		<input
+			bind:this={dateInput}
+			class="day-input"
+			type="date"
+			value={day.date}
+			onchange={pickDate}
+			aria-label="Pick day"
+			tabindex="-1"
+			aria-hidden="true"
+		/>
 	</div>
 
 	<div class="actions">
 		<button class="btn" type="button" onclick={onimport}>Import</button>
 		<button class="btn btn-primary" type="button" onclick={onexport}>Export PNG</button>
-		<button class="btn btn-icon" type="button" onclick={onsetup} title="Settings" aria-label="Settings">
+		<button
+			class="btn btn-icon"
+			type="button"
+			onclick={onsetup}
+			title="Settings"
+			aria-label="Settings"
+		>
 			<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
 				<path
 					d="M8 5.4a2.6 2.6 0 100 5.2 2.6 2.6 0 000-5.2zM8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3.05 3.05l1.13 1.13M11.82 11.82l1.13 1.13M12.95 3.05l-1.13 1.13M4.18 11.82l-1.13 1.13"
@@ -75,21 +122,49 @@
 	}
 
 	.nav {
+		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 10px;
 		flex-wrap: wrap;
 	}
 
-	.day-input {
+	.weekday {
+		font-family: var(--font-mono);
+		font-size: 11px;
+		font-weight: 600;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--navy);
+	}
+
+	.day-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
 		height: 30px;
-		padding: 0 8px;
+		padding: 0 10px;
 		border: 1px solid var(--hairline-strong);
 		border-radius: var(--r-sm);
 		background: var(--surface);
 		font-family: var(--font-mono);
 		font-size: 12px;
 		color: var(--ink);
+		transition: background 140ms var(--ease-out-quint);
+	}
+
+	.day-btn:hover {
+		background: var(--surface-2);
+	}
+
+	.day-input {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
 	}
 
 	.actions {

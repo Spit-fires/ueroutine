@@ -5,14 +5,7 @@
 		placeholder?: string;
 		ariaLabel: string;
 		mono?: boolean;
-		/** Allow adding names that are not in the list yet. */
-		creatable?: boolean;
 		onchange: (value: string) => void;
-		oncreate?: (value: string) => void;
-		/** Called after Enter commits, so the parent can move focus on. */
-		oncommit?: () => void;
-		/** Called on Tab so the parent can step to the next cell. */
-		onstep?: (delta: 1 | -1) => void;
 		/** Bump this to pull focus into the field. */
 		focusToken?: number;
 	}
@@ -20,14 +13,10 @@
 	let {
 		value,
 		options,
-		placeholder = 'Select or type',
+		placeholder = 'Select',
 		ariaLabel,
 		mono = false,
-		creatable = true,
 		onchange,
-		oncreate,
-		oncommit,
-		onstep,
 		focusToken = 0
 	}: Props = $props();
 
@@ -36,7 +25,7 @@
 	const listId = `combo-${Math.random().toString(36).slice(2, 9)}`;
 	let active = $state(0);
 	let input = $state<HTMLInputElement | null>(null);
-	let suppressBlur = false;
+	let menu = $state<HTMLUListElement | null>(null);
 	let lastFocusToken = 0;
 
 	$effect(() => {
@@ -48,75 +37,49 @@
 			lastFocusToken = focusToken;
 			queueMicrotask(() => {
 				input?.focus();
-				input?.select();
-				open = true;
+				openAt(text);
 			});
 		}
 	});
 
-	const query = $derived(text.trim());
-	const needle = $derived(query.toLowerCase());
-	const matches = $derived(
-		needle ? options.filter((option) => option.toLowerCase().includes(needle)) : options
-	);
-	const rows = $derived(matches.slice(0, 80));
-	const exact = $derived(options.some((option) => option.toLowerCase() === needle));
-	const canCreate = $derived(Boolean(query) && creatable && !exact);
+	/** A scroll picker: every option, no typing, no filtering. */
+	const rows = $derived(options.slice(0, 80));
 
 	$effect(() => {
 		if (active >= rows.length) active = Math.max(0, rows.length - 1);
 	});
 
-	function commit(next: string, advance = false) {
+	/** Open the list with the current value highlighted and scrolled into view. */
+	function openAt(current: string) {
+		open = true;
+		const index = rows.indexOf(current);
+		active = index >= 0 ? index : 0;
+		queueMicrotask(() => menu?.querySelector('.active')?.scrollIntoView({ block: 'nearest' }));
+	}
+
+	function commit(next: string) {
 		text = next;
 		onchange(next);
 		open = false;
 		input?.blur();
-		if (advance) queueMicrotask(() => oncommit?.());
-	}
-
-	function create(advance = false) {
-		const name = query;
-		if (!name) {
-			commit('', advance);
-			return;
-		}
-		if (!exact) oncreate?.(name);
-		commit(name, advance);
 	}
 
 	function onkeydown(event: KeyboardEvent) {
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			open = true;
-			active = rows.length ? (active + 1) % rows.length : 0;
+			if (!open) openAt(text);
+			else if (rows.length) active = (active + 1) % rows.length;
 			return;
 		}
 		if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			active = rows.length ? (active - 1 + rows.length) % rows.length : 0;
+			if (!open) openAt(text);
+			else if (rows.length) active = (active - 1 + rows.length) % rows.length;
 			return;
 		}
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			if (query && canCreate) create(true);
-			else if (rows[active] !== undefined) commit(rows[active], true);
-			else if (query) create(true);
-			return;
-		}
-		if (event.key === 'Tab' && onstep) {
-			const pending = text;
-			suppressBlur = true;
-			event.preventDefault();
-			if (pending !== value) {
-				if (!exact && creatable) oncreate?.(pending);
-				onchange(pending);
-			}
-			open = false;
-			queueMicrotask(() => {
-				suppressBlur = false;
-				onstep?.(event.shiftKey ? -1 : 1);
-			});
+			if (rows[active] !== undefined) commit(rows[active]);
 			return;
 		}
 		if (event.key === 'Escape') {
@@ -124,15 +87,6 @@
 			text = value;
 			open = false;
 			input?.blur();
-		}
-	}
-
-	function onblur() {
-		if (suppressBlur) return;
-		open = false;
-		if (text !== value) {
-			if (query && !exact && creatable) oncreate?.(query);
-			onchange(text);
 		}
 	}
 </script>
@@ -143,36 +97,45 @@
 			bind:this={input}
 			bind:value={text}
 			{placeholder}
+			readonly
+			inputmode="none"
 			aria-label={ariaLabel}
 			role="combobox"
 			aria-expanded={open}
 			aria-controls={listId}
-			aria-autocomplete="list"
 			autocomplete="off"
 			spellcheck="false"
-			onfocus={() => {
-				open = true;
-				active = 0;
-			}}
-			oninput={() => {
-				open = true;
-				active = 0;
-			}}
-			onkeydown={onkeydown}
-			onblur={onblur}
+			onfocus={() => openAt(text)}
+			{onkeydown}
+			onblur={() => (open = false)}
 		/>
 		{#if value}
-			<button class="clear" type="button" aria-label={`Clear ${ariaLabel}`} onclick={() => commit('')}>
-
+			<button
+				class="clear"
+				type="button"
+				aria-label={`Clear ${ariaLabel}`}
+				onclick={() => commit('')}
+			>
 				<svg viewBox="0 0 10 10" width="9" height="9" aria-hidden="true">
-					<path d="M1.5 1.5l7 7M8.5 1.5l-7 7" stroke="currentColor" stroke-width="1.4" fill="none" />
+					<path
+						d="M1.5 1.5l7 7M8.5 1.5l-7 7"
+						stroke="currentColor"
+						stroke-width="1.4"
+						fill="none"
+					/>
 				</svg>
 			</button>
 		{/if}
 	</div>
 
 	{#if open}
-		<ul class="menu" id={listId} role="listbox" aria-label={`${ariaLabel} options`}>
+		<ul
+			class="menu"
+			id={listId}
+			bind:this={menu}
+			role="listbox"
+			aria-label={`${ariaLabel} options`}
+		>
 			{#if rows.length}
 				{#each rows as option, index (option)}
 					<li>
@@ -190,24 +153,8 @@
 						</button>
 					</li>
 				{/each}
-			{:else if !needle}
-				<li class="empty">No options yet — type a name to add one.</li>
-			{/if}
-
-			{#if canCreate}
-				<li class="group">new</li>
-				<li>
-					<button
-						type="button"
-						class="create"
-						onmousedown={(event) => event.preventDefault()}
-						onclick={() => create()}
-					>
-						Add “{query}”
-					</button>
-				</li>
-			{:else if needle && !rows.length}
-				<li class="empty">Nothing matches “{query}”.</li>
+			{:else}
+				<li class="empty">No options yet — manage the lists in Settings.</li>
 			{/if}
 		</ul>
 	{/if}
@@ -246,6 +193,8 @@
 		background: transparent;
 		font-size: 13.5px;
 		font-weight: 500;
+		cursor: pointer;
+		user-select: none;
 	}
 
 	.control.mono input {
@@ -304,15 +253,6 @@
 		}
 	}
 
-	.group {
-		padding: 6px 8px 4px;
-		font-family: var(--font-mono);
-		font-size: 9.5px;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
-		color: var(--muted);
-	}
-
 	.empty {
 		padding: 6px 8px 8px;
 		font-size: 12px;
@@ -337,10 +277,5 @@
 	.menu button.active,
 	.menu button:hover {
 		background: var(--surface-sunk);
-	}
-
-	.menu button.create {
-		color: var(--navy);
-		font-weight: 600;
 	}
 </style>

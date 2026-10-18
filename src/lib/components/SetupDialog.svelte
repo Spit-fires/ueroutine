@@ -76,7 +76,12 @@
 							event.currentTarget.reset();
 						}}
 					>
-						<input class="text-input sm" name="subject" placeholder="New subject" aria-label="New subject" />
+						<input
+							class="text-input sm"
+							name="subject"
+							placeholder="New subject"
+							aria-label="New subject"
+						/>
 						<button class="btn btn-sm" type="submit">Add</button>
 					</form>
 				</div>
@@ -90,7 +95,11 @@
 								aria-label="Subject name"
 								onchange={(event) => desk.renameSubject(subject, event.currentTarget.value)}
 							/>
-							<button class="btn btn-sm btn-danger" type="button" onclick={() => desk.removeSubject(subject)}>
+							<button
+								class="btn btn-sm btn-danger"
+								type="button"
+								onclick={() => desk.removeSubject(subject)}
+							>
 								Remove
 							</button>
 						</li>
@@ -113,7 +122,12 @@
 							event.currentTarget.reset();
 						}}
 					>
-						<input class="text-input sm" name="teacher" placeholder="Initials, e.g. SIH" aria-label="New teacher" />
+						<input
+							class="text-input sm"
+							name="teacher"
+							placeholder="Initials, e.g. SIH"
+							aria-label="New teacher"
+						/>
 						<button class="btn btn-sm" type="submit">Add</button>
 					</form>
 				</div>
@@ -132,7 +146,11 @@
 							/>
 							<span class="row-meta">{index + 1}</span>
 							<div class="row-actions">
-								<button class="btn btn-sm btn-danger" type="button" onclick={() => desk.removeTeacher(teacher)}>
+								<button
+									class="btn btn-sm btn-danger"
+									type="button"
+									onclick={() => desk.removeTeacher(teacher)}
+								>
 									Remove
 								</button>
 							</div>
@@ -146,11 +164,13 @@
 			<section class="block">
 				<span class="eyebrow">workspace file</span>
 				<p class="field-note">
-					A JSON file holds every day, class row, period label, subject and teacher. It is the belt-and-braces
-					backup next to the PNG data band.
+					A JSON file holds every day, class row, period label, subject and teacher. It is the
+					belt-and-braces backup next to the PNG data band.
 				</p>
 				<div class="inline">
-					<button class="btn btn-sm" type="button" onclick={exportJson}>Export workspace JSON</button>
+					<button class="btn btn-sm" type="button" onclick={exportJson}
+						>Export workspace JSON</button
+					>
 					<button class="btn btn-sm" type="button" onclick={() => fileInput?.click()}>
 						Import workspace JSON
 					</button>
@@ -175,7 +195,7 @@
 						type="button"
 						onclick={() => {
 							desk.replaceWorkspace(createInitialWorkspace(desk.currentDay.date));
-							desk.flash('Desk reset to its starting state — Ctrl Z to undo', 'info');
+							desk.flash('Desk reset to its starting state', 'info');
 						}}
 					>
 						Reset the desk
@@ -192,7 +212,8 @@
 					</button>
 				</div>
 				<p class="field-note">
-					Everything lives in this browser's own storage: no account, no server, nothing leaves the machine.
+					Everything lives in this browser's own storage: no account, no server, nothing leaves the
+					machine.
 				</p>
 			</section>
 		{/if}

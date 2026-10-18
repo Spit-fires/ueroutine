@@ -11,7 +11,9 @@
 	const periods = $derived(desk.periods);
 	const classes = $derived(desk.classes);
 	const split = $derived(Math.max(1, Math.min(desk.workspace.groupSplit, periods.length)));
-	const template = $derived(`var(--rowhead, 132px) repeat(${periods.length}, minmax(96px, 1fr))`);
+	const template = $derived(
+		`var(--rowhead, 132px) repeat(${periods.length}, minmax(var(--cell-min, 96px), 1fr))`
+	);
 	const rowTag = (row: ClassRow) => row.school ?? '';
 	const isSelected = (classId: string, period: number) =>
 		desk.selection?.dayId === day.id &&
@@ -353,29 +355,38 @@
 
 	@media (max-width: 760px) {
 		.grid {
-			--rowhead: 100px;
+			--rowhead: 96px;
+			--cell-min: 82px;
 		}
 
 		.corner,
 		.head {
-			height: 44px;
+			height: 40px;
 		}
 
 		.rowhead,
 		.cell {
-			height: 64px;
+			height: 52px;
 		}
 
 		.cell {
-			padding: 4px 5px;
+			padding: 3px 4px;
 		}
 
 		.subject {
-			font-size: 12px;
+			font-size: 11.5px;
+		}
+
+		.teacher {
+			font-size: 10px;
 		}
 
 		.rowhead-grade {
-			font-size: 17px;
+			font-size: 15px;
+		}
+
+		.rowhead-section {
+			font-size: 9px;
 		}
 
 		.corner,

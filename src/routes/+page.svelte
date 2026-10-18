@@ -26,71 +26,6 @@
 		void JSON.stringify(desk.workspace);
 		desk.persist();
 	});
-
-	$effect(() => {
-		const onkey = (event: KeyboardEvent) => {
-			const target = event.target as HTMLElement | null;
-			const typing =
-				target &&
-				(target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
-			const meta = event.metaKey || event.ctrlKey;
-
-			if (meta && event.key.toLowerCase() === 'z') {
-				event.preventDefault();
-				if (event.shiftKey) desk.redo();
-				else desk.undo();
-				return;
-			}
-			if (meta && event.key.toLowerCase() === 'y') {
-				event.preventDefault();
-				desk.redo();
-				return;
-			}
-			if (meta && event.key.toLowerCase() === 's') {
-				event.preventDefault();
-				dialog = 'export';
-				return;
-			}
-			if (typing || dialog !== 'none') return;
-
-			if (event.key === 'ArrowRight') {
-				event.preventDefault();
-				desk.moveSelection(1, 0);
-			} else if (event.key === 'ArrowLeft') {
-				event.preventDefault();
-				desk.moveSelection(-1, 0);
-			} else if (event.key === 'ArrowDown') {
-				event.preventDefault();
-				desk.moveSelection(0, 1);
-			} else if (event.key === 'ArrowUp') {
-				event.preventDefault();
-				desk.moveSelection(0, -1);
-			} else if (event.key === 'Enter') {
-				event.preventDefault();
-				desk.focusInspector++;
-			} else if (event.key === 'Escape') {
-				desk.select(null);
-			} else if (event.key.toLowerCase() === 'b') {
-				event.preventDefault();
-				desk.toggleMark('black');
-			} else if (event.key.toLowerCase() === 'y') {
-				event.preventDefault();
-				desk.toggleMark('yellow');
-			} else if (event.key.toLowerCase() === 'r') {
-				event.preventDefault();
-				desk.toggleMark('red');
-			} else if (event.key === 'Backspace' || event.key === 'Delete') {
-				event.preventDefault();
-				desk.clearCell();
-			} else if (meta && event.key.toLowerCase() === 'c') {
-				desk.copyCell();
-			} else if (meta && event.key.toLowerCase() === 'v') {
-				desk.pasteCell();
-			}
-		};
-		window.addEventListener('keydown', onkey);
-		return () => window.removeEventListener('keydown', onkey);
-	});
 </script>
 
 <svelte:head>
@@ -130,8 +65,6 @@
 				<a href="/diagnostics">round-trip check</a>
 				<span class="status-sep">·</span>
 				<span class="status-item">saved in this browser</span>
-				<span class="status-sep">·</span>
-				<span class="status-item"><kbd>Ctrl</kbd>+<kbd>S</kbd> export</span>
 			</div>
 		</footer>
 	</main>
