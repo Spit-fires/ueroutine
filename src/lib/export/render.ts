@@ -53,6 +53,8 @@ const F = {
 	serif: 'Cambria, Georgia, "Times New Roman", serif'
 };
 
+const TYPE_SCALE = 1.45;
+
 const PAD = 22;
 const TITLE_H = 56;
 const TITLE_GAP = 6;
@@ -128,38 +130,55 @@ function fitLines(
 		family?: string;
 		style?: string;
 		maxLines?: number;
+		maxHeight?: number;
 	}
 ): { size: number; lines: string[]; style: string; weight: string | number; family: string } {
 	const family = options.family ?? F.sans;
 	const weight = options.weight ?? 700;
 	const style = options.style ?? '';
 	const maxLines = options.maxLines ?? 2;
+	const maxHeight = options.maxHeight ?? Number.POSITIVE_INFINITY;
 	let size = options.size;
 	const measure = (value: string) => {
 		ctx.font = fontOf(style, weight, size, family);
 		return ctx.measureText(value).width;
 	};
-	while (size > options.minSize && measure(text) > maxWidth) size -= 0.5;
-	if (measure(text) <= maxWidth) return { size, lines: [text], style, weight, family };
+	const wrap = () => {
+		if (measure(text) <= maxWidth) return [text];
 
-	const tokens = text.includes('/')
-		? text.split('/').map((part, index, all) => (index < all.length - 1 ? `${part}/` : part))
-		: text.split(' ');
-	const lines: string[] = [];
-	let current = '';
-	for (const token of tokens) {
-		const candidate = current ? `${current}${text.includes('/') ? '' : ' '}${token}` : token;
-		if (measure(candidate) > maxWidth && current) {
-			lines.push(current);
-			current = token;
-		} else {
-			current = candidate;
+		const tokens = text.includes('/')
+			? text.split('/').map((part, index, all) => (index < all.length - 1 ? `${part}/` : part))
+			: text.split(' ');
+		const lines: string[] = [];
+		let current = '';
+		for (const token of tokens) {
+			const candidate = current ? `${current}${text.includes('/') ? '' : ' '}${token}` : token;
+			if (measure(candidate) > maxWidth && current) {
+				lines.push(current);
+				current = token;
+			} else {
+				current = candidate;
+			}
 		}
-	}
-	if (current) lines.push(current);
+		if (current) lines.push(current);
+		return lines;
+	};
 
-	if (lines.length > maxLines) {
-		return { size, lines: [text.slice(0, 24) + '…'], style, weight, family };
+	let lines: string[] = [];
+	let fits = false;
+	while (true) {
+		lines = wrap();
+		const widthFits = lines.every((line) => measure(line) <= maxWidth);
+		const heightFits = (lines.length - 1) * (size + 1.5) + size <= maxHeight;
+		fits = widthFits && heightFits && lines.length <= maxLines;
+		if (fits || size <= options.minSize) break;
+		size -= 0.5;
+	}
+
+	if (!fits) {
+		let value = text;
+		while (value.length > 1 && measure(`${value}…`) > maxWidth) value = value.slice(0, -1);
+		lines = [`${value}…`];
 	}
 	return { size, lines, style, weight, family };
 }
@@ -187,31 +206,16 @@ function drawEntry(ctx: CanvasRenderingContext2D, entry: Entry, options: EntryOp
 	ctx.textBaseline = 'alphabetic';
 
 	if (subject) {
-		const fitted = fitLines(ctx, subject, maxWidth, {
-			size: options.dense ? 11.5 : 13.5,
-			minSize: options.dense ? 9 : 9.5,
-			weight: 700
-		});
 		ctx.fillStyle = options.ink;
-		ctx.font = fontOf(fitted.style, fitted.weight, fitted.size, fitted.family);
-		const lines = fitted.lines.slice(0, 2);
-		const lineGap = fitted.size + 1.5;
-		const baseY = teacher
-			? options.y + options.h * 0.4 - (lines.length - 1) * lineGap
-			: options.y + options.h * 0.52;
-		lines.forEach((line, index) => ctx.fillText(line, centre, baseY + index * lineGap));
+		ctx.font = fontOf('', 700, (options.dense ? 11.5 : 13.5) * TYPE_SCALE, F.sans);
+		const baseY = teacher ? options.y + options.h * 0.4 : options.y + options.h * 0.52;
+		ctx.fillText(subject, centre, baseY, maxWidth);
 	}
 
 	if (teacher) {
-		const fitted = fitLines(ctx, teacher, maxWidth, {
-			size: options.dense ? 10 : 11.5,
-			minSize: 8,
-			weight: 400,
-			style: 'italic'
-		});
 		ctx.fillStyle = options.subInk;
-		ctx.font = fontOf(fitted.style, fitted.weight, fitted.size, fitted.family);
-		ctx.fillText(fitted.lines[0], centre, options.y + options.h * 0.72);
+		ctx.font = fontOf('italic', 400, (options.dense ? 10 : 11.5) * TYPE_SCALE, F.sans);
+		ctx.fillText(teacher, centre, options.y + options.h * 0.72, maxWidth);
 	}
 	ctx.textAlign = 'left';
 }
@@ -226,15 +230,17 @@ function centreLabel(
 	fill: string,
 	weight: string | number = 700,
 	style = '',
-	family = F.sans
+	family = F.sans,
+	maxHeight?: number
 ) {
 	const fitted = fitLines(ctx, text, maxWidth, {
 		size,
-		minSize: size * 0.6,
+		minSize: size * 0.4,
 		weight,
 		style,
 		family,
-		maxLines: 1
+		maxLines: 1,
+		maxHeight
 	});
 	ctx.fillStyle = fill;
 	ctx.font = fontOf(fitted.style, fitted.weight, fitted.size, fitted.family);
@@ -301,11 +307,12 @@ export function renderDay(
 		greenX + greenW / 2,
 		titleTop + TITLE_H * 0.72,
 		greenW - 24,
-		40,
+		40 * TYPE_SCALE,
 		C.titleRed,
 		700,
 		'',
-		F.serif
+		F.serif,
+		TITLE_H * 0.9
 	);
 	centreLabel(
 		ctx,
@@ -313,11 +320,12 @@ export function renderDay(
 		greenX + greenW / 2,
 		titleTop + TITLE_H + TITLE_GAP + TITLE_H * 0.72,
 		greenW - 24,
-		38,
+		38 * TYPE_SCALE,
 		C.titleBlue,
 		700,
 		'',
-		F.serif
+		F.serif,
+		TITLE_H * 0.9
 	);
 
 	const weekday = weekdayName(day.date);
@@ -332,9 +340,12 @@ export function renderDay(
 		boxLeft + BOX_W / 2,
 		titleTop + TITLE_H * 0.68,
 		BOX_W - 16,
-		24,
+		24 * TYPE_SCALE,
 		C.whiteInk,
-		700
+		700,
+		'',
+		F.sans,
+		TITLE_H * 0.9
 	);
 
 	ctx.fillStyle = C.red;
@@ -345,10 +356,12 @@ export function renderDay(
 		boxLeft + BOX_W / 2,
 		titleTop + TITLE_H + TITLE_GAP + TITLE_H * 0.68,
 		BOX_W - 16,
-		24,
+		24 * TYPE_SCALE,
 		C.whiteInk,
 		700,
-		'italic'
+		'italic',
+		F.sans,
+		TITLE_H * 0.9
 	);
 
 	/* ------------------------------------------------------------- header -- */
@@ -365,8 +378,12 @@ export function renderDay(
 			PAD + ROW_HEAD + (index + 0.5) * PERIOD_W,
 			headerTop + HEAD_ROW * 0.68,
 			PERIOD_W - 8,
-			12.5,
-			C.whiteInk
+			12.5 * TYPE_SCALE,
+			C.whiteInk,
+			700,
+			'',
+			F.sans,
+			HEAD_ROW * 0.9
 		);
 	});
 	centreLabel(
@@ -375,8 +392,12 @@ export function renderDay(
 		PAD + CLASS_W / 2,
 		headerTop + HEAD_ROW * 0.68,
 		CLASS_W - 8,
-		12.5,
-		C.whiteInk
+		12.5 * TYPE_SCALE,
+		C.whiteInk,
+		700,
+		'',
+		F.sans,
+		HEAD_ROW * 0.9
 	);
 	centreLabel(
 		ctx,
@@ -384,8 +405,12 @@ export function renderDay(
 		PAD + CLASS_W + SCL_W / 2,
 		headerTop + HEAD_ROW * 0.68,
 		SCL_W - 8,
-		12.5,
-		C.whiteInk
+		12.5 * TYPE_SCALE,
+		C.whiteInk,
+		700,
+		'',
+		F.sans,
+		HEAD_ROW * 0.9
 	);
 
 	ctx.strokeStyle = 'rgba(255,255,255,0.32)';
@@ -414,15 +439,31 @@ export function renderDay(
 		ctx.fillRect(PAD, y, ROW_HEAD, ROW_H);
 
 		// Grade and SCL sit on one optical centre line, like any table cell.
-		centreLabel(ctx, row.grade, PAD + CLASS_W / 2, y + ROW_H * 0.587, CLASS_W - 10, 15, C.ink);
+		centreLabel(
+			ctx,
+			row.grade,
+			PAD + CLASS_W / 2,
+			y + ROW_H * 0.587,
+			CLASS_W - 10,
+			15 * TYPE_SCALE,
+			C.ink,
+			700,
+			'',
+			F.sans,
+			ROW_H * 0.9
+		);
 		centreLabel(
 			ctx,
 			row.section || row.school,
 			PAD + CLASS_W + SCL_W / 2,
 			y + ROW_H * 0.564,
 			SCL_W - 8,
-			11,
-			C.ink
+			11 * TYPE_SCALE,
+			C.ink,
+			700,
+			'',
+			F.sans,
+			ROW_H * 0.9
 		);
 
 		for (let period = 0; period < columns; period++) {
@@ -478,7 +519,7 @@ export function renderDay(
 
 			if (entries.length === 0 && mark === 'none') {
 				ctx.fillStyle = C.dash;
-				ctx.font = `700 13px ${F.sans}`;
+				ctx.font = `700 ${13 * TYPE_SCALE}px ${F.sans}`;
 				ctx.textAlign = 'center';
 				ctx.fillText('–', x + PERIOD_W / 2, y + ROW_H / 2 + 4);
 				ctx.textAlign = 'left';
