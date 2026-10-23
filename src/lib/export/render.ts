@@ -30,7 +30,6 @@ export interface RenderMeta {
 
 const C = {
 	page: '#ffffff',
-	blueBlock: '#bdd7ee',
 	sage: '#dce5c8',
 	titleRed: '#e00000',
 	titleBlue: '#2237a8',
@@ -292,10 +291,7 @@ export function renderDay(
 	ctx.fillStyle = C.page;
 	ctx.fillRect(0, 0, width, height);
 
-	ctx.fillStyle = C.blueBlock;
-	ctx.fillRect(PAD, titleTop, ROW_HEAD, TITLE_BLOCK);
-
-	const greenX = PAD + ROW_HEAD + 4;
+	const greenX = PAD;
 	const greenW = boxLeft - 4 - greenX;
 	ctx.fillStyle = C.sage;
 	ctx.fillRect(greenX, titleTop, greenW, TITLE_H);
