@@ -11,7 +11,6 @@
 	let { onexport, onimport, onsetup }: Props = $props();
 
 	const day = $derived<Day>(desk.currentDay);
-	let dateInput = $state<HTMLInputElement | null>(null);
 
 	function pickDate(event: Event) {
 		const value = (event.currentTarget as HTMLInputElement).value;
@@ -21,11 +20,12 @@
 		}
 	}
 
-	function openPicker() {
+	/** Desktop click-focus should open the calendar, like clicking a real date field. */
+	function revealPicker(event: FocusEvent) {
 		try {
-			dateInput?.showPicker();
+			(event.currentTarget as HTMLInputElement).showPicker();
 		} catch {
-			dateInput?.click();
+			/* older Safari — the native tap already opens the wheel */
 		}
 	}
 </script>
@@ -37,7 +37,7 @@
 
 	<div class="nav">
 		<span class="weekday">{weekdayName(day.date)}</span>
-		<button class="day-btn" type="button" onclick={openPicker} aria-label="Pick day">
+		<div class="day-control">
 			<span class="day-text">{fullDate(day.date)}</span>
 			<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
 				<rect
@@ -58,17 +58,16 @@
 					stroke-linecap="round"
 				/>
 			</svg>
-		</button>
-		<input
-			bind:this={dateInput}
-			class="day-input"
-			type="date"
-			value={day.date}
-			onchange={pickDate}
-			aria-label="Pick day"
-			tabindex="-1"
-			aria-hidden="true"
-		/>
+			<input
+				class="day-input"
+				type="date"
+				value={day.date}
+				onchange={pickDate}
+				onfocus={revealPicker}
+				aria-label="Pick day"
+				tabindex="-1"
+			/>
+		</div>
 	</div>
 
 	<div class="actions">
@@ -122,7 +121,6 @@
 	}
 
 	.nav {
-		position: relative;
 		display: flex;
 		align-items: center;
 		gap: 10px;
@@ -138,7 +136,8 @@
 		color: var(--navy);
 	}
 
-	.day-btn {
+	.day-control {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
@@ -153,18 +152,24 @@
 		transition: background 140ms var(--ease-out-quint);
 	}
 
-	.day-btn:hover {
+	.day-control:hover {
 		background: var(--surface-2);
 	}
 
 	.day-input {
 		position: absolute;
-		left: 0;
-		bottom: 0;
-		width: 1px;
-		height: 1px;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
 		opacity: 0;
-		pointer-events: none;
+		cursor: pointer;
+		font-size: 16px;
+		-webkit-appearance: none;
+		appearance: none;
 	}
 
 	.actions {
